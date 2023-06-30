@@ -1,17 +1,25 @@
 import subprocess
-import socket
+import time
 
-def connect_to_vpn(config_file):
-    process = subprocess.Popen(['openvpn', '--config', config_file])
-
+def connect_to_vpn():
+    config_file = './config/client1.ovpn'
+    connect_proc = subprocess.Popen(['sudo', 'openvpn', '--config', config_file], stdout=subprocess.PIPE)
+    
     while True:
-        try:
-            sock = socket.create_connection(('140.113.169.90', 1194), timeout=10)
-            break
-        except socket.error:
-            continue
+        output = connect_proc.stdout.readline()
+        if output:
+            print(output)
+            if 'Initialization Sequence Completed' in str(output):
+                time.sleep(0.5)
+                ping_test()
+                connect_proc.send_signal(4)
+                break
+    
+    return connect_proc
 
-    print('CONNECT SUCCESS!')
-    process.terminate()
-
-connect_to_vpn('./config/client1.ovpn')
+def ping_test():
+    subprocess.run(['ping', '8.8.8.8', '-c 3', '-I', '10.8.0.2'])
+    
+if __name__ == "__main__":
+    connect_to_vpn() 
+    
